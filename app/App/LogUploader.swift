@@ -3,7 +3,7 @@ import UIKit
 
 /// Sends the app's logs to the developer (fivestarport.site/api/log, which forwards them on Telegram; GTA-240).
 enum LogUploader {
-    static let endpoint = URL(string: "https://fivestarport.site/api/log")!
+    // AMMAR YT does not upload logs to the original developer.
     /// The site accepts up to 4 MB, so each log is trimmed to 1.8 MB: its start (device, settings,
     /// game files) and its end (where it stopped or crashed).
     private static let perLog = 1_800_000
@@ -11,7 +11,7 @@ enum LogUploader {
     /// GTA-201: after a log is sent, offer to open the public report page (fivestarport.site/report) with the device,
     /// system and app version and the log reference filled in, so the report arrives with its log. An optional
     /// button next to OK (Kevin, 2026-10-25: on from v1.5).
-    static let offersReportPage = true
+    static let offersReportPage = false
     /// The report page for the log just sent (set on success when offersReportPage is on).
     private(set) static var lastReportURL: URL?
 
@@ -64,6 +64,15 @@ enum LogUploader {
     }
 
     static func send(note: String, includeSave: Bool = false, done: @escaping ((String, String)) -> Void) {
+        // Fail closed. Only a specifically configured localhost test endpoint is allowed.
+        guard let url = ProcessInfo.processInfo.environment["PG_LOG_ENDPOINT"].flatMap(URL.init(string:)),
+              ["127.0.0.1", "localhost", "::1"].contains(url.host ?? ""),
+              ["http", "https"].contains(url.scheme?.lowercased() ?? "") else {
+            DispatchQueue.main.async {
+                done(("رفع السجلات معطّل", "لا يوجد خادم رفع سجلات في AMMAR YT. استخدم مشاركة السجل محليًا من الإعدادات."))
+            }
+            return
+        }
         let save = includeSave ? latestSave().flatMap { url in (try? Data(contentsOf: url)).map { (url.lastPathComponent, $0) } } : nil
         var body = Data()
         // A stopped run and iOS's own reports go first when there are any (GTA-159); the logs share the site's 4 MB,
@@ -82,11 +91,7 @@ enum LogUploader {
             body.append("\n===== END SAVE =====\n".data(using: .utf8)!)
         }
         guard !body.isEmpty else { DispatchQueue.main.async { done((AppLanguage.choose("No log yet"), AppLanguage.choose("Start the game once, then try again."))) }; return }
-        var url = endpoint
-        #if targetEnvironment(simulator)
-        // Test (PG_LOG_ENDPOINT=http://127.0.0.1:port/): the upload goes to a local catcher, not to Telegram.
-        if let local = ProcessInfo.processInfo.environment["PG_LOG_ENDPOINT"].flatMap(URL.init(string:)) { url = local }
-        #endif
+        // This destination has already been restricted to localhost.
         var request = URLRequest(url: url, timeoutInterval: 60)
         request.httpMethod = "POST"
         request.setValue("text/plain; charset=utf-8", forHTTPHeaderField: "Content-Type")
@@ -125,14 +130,14 @@ final class SendLogViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        title = AppLanguage.choose("Send log to the developer")
+        title = "سجلات AMMAR YT"
         view.backgroundColor = .systemGroupedBackground
         navigationItem.leftBarButtonItem = UIBarButtonItem(systemItem: .cancel, primaryAction: UIAction { [weak self] _ in self?.dismiss(animated: true) })
         navigationItem.rightBarButtonItem = UIBarButtonItem(title: AppLanguage.choose("Send"), primaryAction: UIAction { [weak self] _ in self?.send() })
         navigationItem.rightBarButtonItem?.style = .done
 
         let info = UILabel()
-        info.text = AppLanguage.choose("Sends this run's game log and the previous one: your iPhone model, iOS version, app settings and what the game printed. No personal data, photos or contacts.")
+        info.text = "لا نرفع سجلّاتك إلى أي خادم خارجي. يمكن مشاركة السجلات محليًا من إعدادات التطبيق."
         info.numberOfLines = 0
         info.font = .preferredFont(forTextStyle: .footnote)
         info.textColor = .secondaryLabel
