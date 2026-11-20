@@ -1,0 +1,5 @@
+Build/
+AMMARYTGTAUIPreview.xcodeproj/
+Info.plist
+*.ipa
+.DS_Store
