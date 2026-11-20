@@ -1,5 +1,6 @@
 import SwiftUI
 import UniformTypeIdentifiers
+import CryptoKit
 
 // AMMAR YT GTA V — UI-only iPhone/iPad preview.
 // This target intentionally DOES NOT contain the GTA V engine or game files.
@@ -184,7 +185,7 @@ private struct HomeScreen: View {
 private struct DataScreen: View {
     @AppStorage("authorizedDataSourceURL") private var savedURL = ""
     @State private var draftURL = ""
-    @State private var selectedFile = ""
+    @State private var selectedFileReport: PreviewFileReport?
     @State private var showingImporter = false
     @State private var showingAlert = false
     @State private var alertMessage = ""
@@ -195,7 +196,7 @@ private struct DataScreen: View {
                 VStack(alignment: .leading, spacing: 18) {
                     Text("إدارة الداتا")
                         .font(.largeTitle.bold())
-                    Text("جرّب حفظ رابط لمصدر ملفات تملك حق استخدامه. هذا النموذج لا يقوم بتنزيل الداتا ولا استخراجها.")
+                    Text("احفظ رابطًا مصرحًا به وافحص أرشيفًا أو مجلد ملفات محليًا. هذه المعاينة لا تنزّل ولا تستخرج الداتا.")
                         .font(.subheadline)
                         .foregroundStyle(Brand.muted)
 
@@ -245,10 +246,14 @@ private struct DataScreen: View {
                             }
                             .tint(Brand.cyan)
 
-                            Text(selectedFile.isEmpty ? "لم تختر ملفًا بعد" : "الملف المختار: \(selectedFile)")
-                                .font(.subheadline)
-                                .foregroundStyle(Brand.muted)
-                            Text("الاختيار يعرض اسم الملف فقط، ولا يستورد بيانات اللعبة فعليًا.")
+                            if let report = selectedFileReport {
+                                FileReportCard(report: report)
+                            } else {
+                                Text("لم تختر ملفًا بعد")
+                                    .font(.subheadline)
+                                    .foregroundStyle(Brand.muted)
+                            }
+                            Text("الفحص لا ينسخ أي بيانات، ولا يثبت أرشيف اللعبة أو المودات.")
                                 .font(.caption)
                                 .foregroundStyle(Brand.muted)
                         }
@@ -265,7 +270,7 @@ private struct DataScreen: View {
         ) { result in
             switch result {
             case .success(let urls):
-                selectedFile = urls.first?.lastPathComponent ?? ""
+                if let url = urls.first { selectedFileReport = PreviewFileInspector.inspect(url) }
             case .failure(let error):
                 alertMessage = "لم يُفتح الملف: \(error.localizedDescription)"
                 showingAlert = true
@@ -295,6 +300,10 @@ private struct DataScreen: View {
 }
 
 private struct ModsScreen: View {
+    @State private var showingModImporter = false
+    @State private var selectedModReport: PreviewFileReport?
+    @State private var modImportError = ""
+
     var body: some View {
         PreviewBackground {
             ScrollView {
@@ -308,11 +317,51 @@ private struct ModsScreen: View {
                     feature("الشخصيات", symbol: "person.crop.square", description: "إدارة نماذج الشخصيات والملابس المدعومة")
                     feature("AMMAR MOD MENU", symbol: "slider.horizontal.3", description: "خيارات اللعب والغش التي يدعمها المحرك فعليًا")
                     feature("الوضع الآمن", symbol: "shield.lefthalf.filled", description: "تشغيل اللعبة بدون مودات عند وقوع مشكلة")
-                    Text("هذه الأقسام للمعاينة فقط؛ لا تثبّت أو تشغّل مودات في نسخة Preview.")
-                        .font(.caption)
-                        .foregroundStyle(Brand.muted)
+                    PreviewPanel {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Label("فحص ملف مود محلي", systemImage: "doc.zipper")
+                                .font(.headline)
+                                .foregroundStyle(Brand.cyan)
+                            Button {
+                                showingModImporter = true
+                            } label: {
+                                Label("اختيار ZIP / OIV / ملف مود", systemImage: "square.and.arrow.down")
+                            }
+                            .tint(Brand.cyan)
+                            if let report = selectedModReport {
+                                FileReportCard(report: report)
+                            } else {
+                                Text("يمكن اختيار ملف تجريبي وعرض حجمه وبصمته عند صغر حجمه.")
+                                    .font(.subheadline)
+                                    .foregroundStyle(Brand.muted)
+                            }
+                            if !modImportError.isEmpty {
+                                Text(modImportError)
+                                    .font(.footnote)
+                                    .foregroundStyle(.orange)
+                            }
+                            Text("الفحص فقط: لن تُثبت المودات أو تُنفّذ داخل اللعبة.")
+                                .font(.caption)
+                                .foregroundStyle(Brand.muted)
+                        }
+                    }
                 }
                 .padding(20)
+            }
+        }
+        .fileImporter(
+            isPresented: $showingModImporter,
+            allowedContentTypes: [.zip, .archive, .data],
+            allowsMultipleSelection: false
+        ) { result in
+            switch result {
+            case .success(let urls):
+                if let url = urls.first {
+                    selectedModReport = PreviewFileInspector.inspect(url)
+                    modImportError = ""
+                }
+            case .failure(let error):
+                modImportError = "فشل فتح الملف: \(error.localizedDescription)"
             }
         }
     }
@@ -353,7 +402,7 @@ private struct AboutScreen: View {
                             Label("AMMAR YT GTA V", systemImage: "gamecontroller")
                                 .font(.title3.bold())
                                 .foregroundStyle(Brand.cyan)
-                            Text("واجهة تجريبية — v0.1.0")
+                            Text("واجهة تجريبية — v0.2.0")
                             Text("iPhone / iPad • iOS 16+")
                             Text("لا تحتوي هذه النسخة على بيانات اللعبة أو محرك GTA V.")
                                 .font(.subheadline)
@@ -364,7 +413,7 @@ private struct AboutScreen: View {
                         VStack(alignment: .leading, spacing: 8) {
                             Label("الخصوصية", systemImage: "lock.shield")
                                 .font(.headline)
-                            Text("لا تجمع هذه المعاينة إحصائيات ولا ترسل سجلّات أو بيانات إلى خدمات المطور الأصلي. يُحفظ عنوان الداتا الذي تدخله محليًا في إعدادات التطبيق.")
+                            Text("لا تجمع هذه المعاينة إحصائيات ولا تتصل بخدمات المطور الأصلي. رابط الداتا محفوظ محليًا، وفحص الملفات لا يرسل محتوياتها إلى أي خادم.")
                                 .font(.subheadline)
                                 .foregroundStyle(Brand.muted)
                         }
@@ -382,5 +431,142 @@ private struct AboutScreen: View {
                 .padding(20)
             }
         }
+    }
+}
+
+
+// Shared detail card for non-destructive file inspection.
+private struct FileReportCard: View {
+    let report: PreviewFileReport
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            Label(report.name, systemImage: "doc.text.magnifyingglass")
+                .font(.subheadline.bold())
+                .lineLimit(2)
+            HStack {
+                Text("النوع: \(report.kind)")
+                Spacer()
+                Text(report.size)
+            }
+            .font(.caption)
+            .foregroundStyle(Brand.muted)
+            Text(report.detail)
+                .font(.caption)
+                .foregroundStyle(Brand.muted)
+                .fixedSize(horizontal: false, vertical: true)
+            if let digest = report.sha256 {
+                Text("SHA-256: \(digest)")
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(Brand.cyan)
+                    .textSelection(.enabled)
+                    .environment(\.layoutDirection, .leftToRight)
+            }
+        }
+    }
+}
+
+// Embedded helper: the generated Xcode project can build without refreshing its file references.
+/// Non-destructive, security-scoped inspection for the standalone iOS preview.
+///
+/// This is NOT a mod installer, a game-data downloader, an archive extractor,
+/// or a game-engine compatibility certificate. It never copies or executes data.
+struct PreviewFileReport {
+    let name: String
+    let kind: String
+    let size: String
+    let detail: String
+    let sha256: String?
+}
+
+enum PreviewFileInspector {
+    private static let smallFileLimit: Int64 = 8 * 1024 * 1024
+
+    static func inspect(_ url: URL) -> PreviewFileReport {
+        let accessGranted = url.startAccessingSecurityScopedResource()
+        defer {
+            if accessGranted { url.stopAccessingSecurityScopedResource() }
+        }
+
+        let values = try? url.resourceValues(forKeys: [.isDirectoryKey, .fileSizeKey])
+        let isDirectory = values?.isDirectory ?? false
+        let name = url.lastPathComponent
+
+        if isDirectory {
+            // These are only the minimum structural indicators. The native
+            // project's check_game_files.py also checks exact SHA-256 values.
+            let required = [
+                "data/manifest.json",
+                "b/8b0b5899ed/game.wasm",
+                "b/8b0b5899ed/shaders/index.json"
+            ]
+            let available = required.filter {
+                FileManager.default.fileExists(atPath: url.appendingPathComponent($0).path)
+            }
+            let missing = required.filter { !available.contains($0) }
+            let detail: String
+            if missing.isEmpty {
+                detail = "البنية الأساسية للملفات موجودة. هذا فحص أولي فقط؛ لم نفحص بصمات المحرك أو ملفات Shaders كاملة."
+            } else {
+                detail = "يوجد \(available.count) من 3 ملفات أساسية. المفقود: \(missing.joined(separator: "، "))."
+            }
+            return PreviewFileReport(
+                name: name,
+                kind: "مجلد",
+                size: "غير محسوب",
+                detail: detail,
+                sha256: nil
+            )
+        }
+
+        let bytes = Int64(values?.fileSize ?? 0)
+        let extensionName = url.pathExtension.lowercased()
+        let kind = extensionName.isEmpty ? "ملف" : extensionName.uppercased()
+        let size = ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
+
+        guard FileManager.default.isReadableFile(atPath: url.path) else {
+            return PreviewFileReport(
+                name: name, kind: kind, size: size,
+                detail: "لا يمكن قراءة هذا الملف من موقعه الحالي. جرّب نسخه إلى «على الـ iPhone» ثم اختياره.",
+                sha256: nil
+            )
+        }
+
+        // Keep the UI responsive: only small test archives get an inline digest.
+        // Large game archives are never loaded or copied into preview storage.
+        if bytes > 0 && bytes <= smallFileLimit {
+            do {
+                let digest = try sha256(for: url)
+                return PreviewFileReport(
+                    name: name, kind: kind, size: size,
+                    detail: "تمت قراءة ملف التجربة وحساب بصمته. لم يُستخرج أو يُثبت أو يُشغّل.",
+                    sha256: digest
+                )
+            } catch {
+                return PreviewFileReport(
+                    name: name, kind: kind, size: size,
+                    detail: "ظهرت مشكلة أثناء القراءة: \(error.localizedDescription)",
+                    sha256: nil
+                )
+            }
+        }
+
+        return PreviewFileReport(
+            name: name, kind: kind, size: size,
+            detail: bytes > smallFileLimit
+                ? "تم فحص الاسم والحجم فقط. تُحسب البصمة لاحقًا ضمن نظام التثبيت الحقيقي."
+                : "تم التعرف إلى الملف. لم يُستخرج أو يُثبت أو يُشغّل.",
+            sha256: nil
+        )
+    }
+
+    private static func sha256(for url: URL) throws -> String {
+        let file = try FileHandle(forReadingFrom: url)
+        defer { try? file.close() }
+        var hasher = SHA256()
+        while let chunk = try file.read(upToCount: 1024 * 1024), !chunk.isEmpty {
+            hasher.update(data: chunk)
+        }
+        return hasher.finalize().map { String(format: "%02x", $0) }.joined()
     }
 }

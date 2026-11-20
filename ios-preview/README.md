@@ -1,6 +1,6 @@
 # AMMAR YT GTA V — iPhone/iPad UI preview
 
-This folder is an **independent, buildable iOS interface preview** inside the `Amaryt1/G` repository. It lets you see and test the proposed Arabic visual identity on an iPhone/iPad **without game data**.
+This folder is an **independent, buildable iOS interface preview (v0.2.0)** inside the `Amaryt1/G` repository. It lets you see and test the proposed Arabic visual identity on an iPhone/iPad **without game data**.
 
 **Important:** This preview is *not* the real GTA V engine. It does not play GTA V, download or unpack game archives, install mods, or bypass any license or signing restrictions. It only demonstrates the planned launcher UI. The upstream native game source remains under `app/`.
 
@@ -10,7 +10,10 @@ This folder is an **independent, buildable iOS interface preview** inside the `A
 - Working navigation between sections.
 - Play button explains why the actual game is not yet available.
 - Local-only saving of an HTTPS data-source link (no download), with basic URL validation.
-- iOS file picker to display the selected archive/folder name (no import/extraction).
+- iOS Files picker with **read-only inspection** of chosen data folders, archives and test mod files.
+- Shows file name, type and actual size; computes **SHA-256 for small test files up to 8 MiB**.
+- A selected folder is checked for three basic layout markers (`data/manifest.json`, `b/8b0b5899ed/game.wasm`, `b/8b0b5899ed/shaders/index.json`). This does **not** prove data compatibility or game build readiness.
+- No file copying, extraction, download, mod installation or execution; no data is uploaded.
 - No telemetry, update checks, or network requests.
 - iOS 16+ target for both iPhone and iPad.
 
@@ -46,3 +49,16 @@ The original app in `app/` is a separate runtime target. This preview is deliber
 - `xcodebuild` fails: inspect `ios-preview/Build/xcodebuild.log` and share a screenshot of the **error lines**, not private signing information.
 - Simulator or Xcode shows `No such module 'UIKit'`: open the generated **.xcodeproj**, not an individual Swift file, and choose an iOS target instead of **My Mac**.
 - Do not merge this branch into `main` before reviewing and testing. Keep `Feather`, `Mstoda` and store code outside this repository.
+
+
+## Preview v0.2.0 test checklist
+
+1. Build with `bash ios-preview/build_preview_ipa.sh` or run the generated `.xcodeproj` on the iPhone Simulator.
+2. Open **الداتا**, save a valid `https://` URL, switch tabs, and return. The saved URL should remain. Try an invalid URL and confirm rejection.
+3. Open **الداتا → اختيار أرشيف أو مجلد** and select a small ZIP test file. The name, size and SHA-256 should appear (SHA-256 only for files up to 8 MiB).
+4. Select a directory. The view should report whether the three minimum game-folder layout markers are present; it must not say the engine is valid from path presence alone.
+5. Open **المودات → اختيار ZIP / OIV / ملف مود**, pick a small test archive, and confirm read-only inspection. Nothing should be installed.
+6. Press **تشغيل اللعبة** and verify the honest `UI-only` alert still appears.
+7. Test on a physical iPhone/iPad with an actual provisioned Apple profile before calling it device-tested.
+
+The game engine under `app/` is not part of this preview build. Never upload copyrighted game content or signing credentials to GitHub.
