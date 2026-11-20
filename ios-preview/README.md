@@ -1,6 +1,6 @@
 # AMMAR YT GTA V — iPhone/iPad UI preview
 
-This folder is an **independent, buildable iOS interface preview (v0.2.0)** inside the `Amaryt1/G` repository. It lets you see and test the proposed Arabic visual identity on an iPhone/iPad **without game data**.
+This folder is an **independent, buildable iOS interface preview (v0.3.0)** inside the `Amaryt1/G` repository. It lets you see and test the proposed Arabic visual identity on an iPhone/iPad **without game data**.
 
 **Important:** This preview is *not* the real GTA V engine. It does not play GTA V, download or unpack game archives, install mods, or bypass any license or signing restrictions. It only demonstrates the planned launcher UI. The upstream native game source remains under `app/`.
 
@@ -41,7 +41,7 @@ After running the script, open `ios-preview/AMMARYTGTAUIPreview.xcodeproj` in Xc
 
 ### How this fits the future game app
 
-The original app in `app/` is a separate runtime target. This preview is deliberately isolated: it is not yet linked to `GameInstallManager`, `GameFolder`, or any game renderer. After obtaining authorized, matching `game.wasm` and shaders, we will build and verify the original game target, then transfer validated UI changes and functionality into it. We will not publish proprietary game code, game files, keys or signed app packages.
+The original game is a separate runtime target in `app/`. Since v0.3.0 the **same SwiftUI launcher source** is compiled in that native target via `AMMAR_NATIVE`. Its Play action is bound by `NativePortViewController` to the actual engine boot, with real data, mods and settings controls. The standalone preview target remains deliberately isolated: it cannot start GTA V or install game files. After obtaining authorized, matching `game.wasm` and shaders, we will build and verify the original game target, then transfer validated UI changes and functionality into it. We will not publish proprietary game code, game files, keys or signed app packages.
 
 ## Troubleshooting
 
@@ -51,7 +51,7 @@ The original app in `app/` is a separate runtime target. This preview is deliber
 - Do not merge this branch into `main` before reviewing and testing. Keep `Feather`, `Mstoda` and store code outside this repository.
 
 
-## Preview v0.2.0 test checklist
+## Preview v0.3.0 test checklist
 
 1. Build with `bash ios-preview/build_preview_ipa.sh` or run the generated `.xcodeproj` on the iPhone Simulator.
 2. Open **الداتا**, save a valid `https://` URL, switch tabs, and return. The saved URL should remain. Try an invalid URL and confirm rejection.
@@ -62,3 +62,12 @@ The original app in `app/` is a separate runtime target. This preview is deliber
 7. Test on a physical iPhone/iPad with an actual provisioned Apple profile before calling it device-tested.
 
 The game engine under `app/` is not part of this preview build. Never upload copyrighted game content or signing credentials to GitHub.
+
+### v0.3.0 — No-Terminal simulator test
+
+1. In **GitHub Desktop**, Fetch/Pull branch `feature/ammar-yt-v030-play-bridge`.
+2. Open the previously generated `AMMARYTGTAUIPreview.xcodeproj` in Xcode and press **Command + R**.
+3. Check the Home and Settings tabs both display **v0.3.0**, even when the generated Xcode Info.plist is still on an older setting.
+4. Choose Story or Sandbox. Tap Play, confirm the preview explicitly tells you that no game engine is present, and use the Data alert action to navigate to data settings.
+5. All previously available data and mod file inspections should still work.
+6. For real engine boot testing, use the separate native target only once the permitted matching engine and shaders exist and the native game build succeeds.
