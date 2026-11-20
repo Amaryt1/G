@@ -812,24 +812,32 @@ final class NativePortViewController: UIViewController, MTKViewDelegate {
     }
 
     private func startFromAMMARLauncher(mode: Int) {
-        guard !engineStarted else { return }
-        if GameInstallManager.shared.isRunning {
-            showGameFiles() // Show real download status while a download runs.
-            return
-        }
+        // "Play" enters the real native port shell even when game assets are absent.
+        // Game files are required for the *game world*, not for using the port's
+        // original data setup, mod manager and settings.
+        guard !engineStarted, presentedViewController == nil else { return }
         GameSettings.shared.gameMode = mode == 1 ? .sandbox : .story
         refreshModeChoice()
-        if !GameFolder.isChosen && !Self.isServerAddress(GameSettings.shared.assetServer) {
-            // Without data we open the *real* importer, not a fake Play screen.
-            showGameFiles()
-            return
-        }
-        guard launchButton.isEnabled else {
-            showGameFiles()
-            return
-        }
+
+        // The native HomeView below the SwiftUI launcher contains the original
+        // Game Files workflow (including the first-run add-data guide). Reveal
+        // it before invoking the original game boot handler, so missing data
+        // takes the user INSIDE that native UI instead of blocking the entry.
+        ammarHost?.view.isHidden = true
         ammarBridge.launching = true
-        startEngine() // The actual PGStartEngine call remains inside this method.
+
+        if GameInstallManager.shared.isRunning {
+            // Original screen shows the existing download progress.
+            ammarBridge.launching = false
+            showGameFiles()
+            return
+        }
+
+        // Do not duplicate or bypass the engine's own data checks:
+        // startEngine() handles missing local files/servers and opens the real
+        // GameFilesViewController when needed. Once data is valid it proceeds
+        // to PGStartEngine using the original manifest and runtime.
+        startEngine()
         if !engineStarted { ammarBridge.launching = false }
     }
 
