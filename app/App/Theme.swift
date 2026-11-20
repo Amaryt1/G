@@ -14,15 +14,15 @@ enum Theme {
     /// The Lite build for iPhones with little memory: Info.plist PGLiteMode (build_ipa.sh --lite), or PG_LITE=1.
     static let isLite: Bool = (Bundle.main.object(forInfoDictionaryKey: "PGLiteMode") as? Bool ?? false)
         || (ProcessInfo.processInfo.environment["PG_LITE"].map { $0 != "0" } ?? false)
-    static let accent = UIColor(red: 1.0, green: 0.62, blue: 0.18, alpha: 1)        // sunset orange
-    static let accentDeep = UIColor(red: 0.95, green: 0.36, blue: 0.16, alpha: 1)
+    static let accent = UIColor(red: 0.20, green: 0.85, blue: 0.98, alpha: 1)       // AMMAR cyan
+    static let accentDeep = UIColor(red: 0.08, green: 0.65, blue: 0.84, alpha: 1)
     static let ok = UIColor(red: 0.30, green: 0.85, blue: 0.47, alpha: 1)
     static let warning = UIColor(red: 1.0, green: 0.78, blue: 0.26, alpha: 1)
     static let problem = UIColor(red: 1.0, green: 0.42, blue: 0.38, alpha: 1)
     static let text = UIColor.white
     static let secondaryText = UIColor(white: 1, alpha: 0.68)
     static let tertiaryText = UIColor(white: 1, alpha: 0.45)
-    static let night = UIColor(red: 0.03, green: 0.05, blue: 0.11, alpha: 1)       // behind everything
+    static let night = UIColor(red: 0.025, green: 0.055, blue: 0.105, alpha: 1)       // behind everything
     static let panelStroke = UIColor(white: 1, alpha: 0.12)
 
     static func display(_ size: CGFloat, _ weight: UIFont.Weight = .heavy) -> UIFont {
@@ -102,7 +102,7 @@ enum Theme {
         config.image = symbol.map { UIImage(systemName: $0, withConfiguration: UIImage.SymbolConfiguration(weight: .heavy)) } ?? nil
         config.imagePadding = 10
         config.cornerStyle = .capsule
-        config.baseForegroundColor = UIColor(red: 0.16, green: 0.07, blue: 0.02, alpha: 1)
+        config.baseForegroundColor = UIColor(red: 0.025, green: 0.055, blue: 0.105, alpha: 1)
         config.background.backgroundColor = accent
         config.contentInsets = NSDirectionalEdgeInsets(top: 14, leading: 30, bottom: 14, trailing: 30)
         config.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { attributes in
