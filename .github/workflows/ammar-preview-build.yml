@@ -36,6 +36,29 @@ jobs:
               )
           print(f"AMMAR YT v{version}: display and XcodeGen versions match")
           PY
+      - name: Check native launcher wiring (no proprietary game files)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Swift syntax checking only: this does not typecheck or run the
+          # native game engine, which requires the user's lawful game.wasm.
+          xcrun swiftc -frontend -parse app/App/NativePortViewController.swift
+          python3 -m compileall -q app/Scripts
+          python3 - <<'PY'
+          from pathlib import Path
+          native = Path("app/App/NativePortViewController.swift").read_text()
+          config = Path("app/project.yml").read_text()
+          game = Path("app/Scripts/check_game_files.py").read_text()
+          assert "UIHostingController(rootView: PreviewRoot(bridge: ammarBridge))" in native
+          assert "self?.startFromAMMARLauncher(mode: mode)" in native
+          assert "PGStartEngine(manifest" in native
+          assert "requestAMMARLandscapeForGame()" in native
+          assert "UIInterfaceOrientationPortrait" in config
+          assert "AMMAR_NATIVE" in config
+          assert "ENGINE_SHA256" in game and "SHADER_INDEX_SHA256" in game
+          print("Native launcher source hooks and mandatory engine hash gate verified.")
+          print("NOTE: full native compilation and gameplay were NOT verified.")
+          PY
       - name: Install XcodeGen
         run: brew install xcodegen
       - name: Generate preview Xcode project
