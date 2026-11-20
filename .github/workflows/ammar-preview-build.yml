@@ -45,6 +45,7 @@ jobs:
         working-directory: ios-preview
         run: |
           set -o pipefail
+          mkdir -p Build
           xcodebuild \
             -project AMMARYTGTAUIPreview.xcodeproj \
             -scheme AMMARYTGTAUIPreview \
