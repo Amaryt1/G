@@ -1,0 +1,39 @@
+name: AMMARYTGTAUIPreview
+options:
+  deploymentTarget:
+    iOS: "16.0"
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    CODE_SIGN_STYLE: Automatic
+targets:
+  AMMARYTGTAUIPreview:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.amaryt1.ammarytgtav.preview
+        PRODUCT_NAME: AMMARYTGTAUIPreview
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SWIFT_VERSION: "5.0"
+        ASSETCATALOG_COMPILER_APPICON_NAME: ""
+    info:
+      path: Info.plist
+      properties:
+        CFBundleDisplayName: AMMAR YT GTA V
+        CFBundleDevelopmentRegion: ar
+        CFBundleShortVersionString: "0.1.0"
+        CFBundleVersion: "1"
+        UILaunchScreen: {}
+        UIRequiresFullScreen: false
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+schemes:
+  AMMARYTGTAUIPreview:
+    build:
+      targets:
+        AMMARYTGTAUIPreview: all
