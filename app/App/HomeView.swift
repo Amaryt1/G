@@ -23,6 +23,10 @@ final class HomeView: UIView {
     let playButton = Theme.primaryButton(AppLanguage.choose("Play"), symbol: "play.fill")
     let settingsButton = Theme.glassButton(AppLanguage.choose("Settings"), symbol: "gearshape.fill")
     let layoutButton = Theme.glassButton(AppLanguage.choose("Controls layout"), symbol: "hand.tap.fill")
+    // Real native shortcuts: wired in NativePortViewController to existing managers.
+    let dataButton = Theme.glassButton("الداتا", symbol: "square.and.arrow.down")
+    let modsButton = Theme.glassButton("المودات", symbol: "car.side.fill")
+    let quickSettingsButton = Theme.glassButton("الإعدادات", symbol: "gearshape.fill")
     let preloadLabel = UILabel()
     let controllerLabel = UILabel()
     /// Taps on the game files card.
@@ -47,10 +51,18 @@ final class HomeView: UIView {
 
     init(modes: [(title: String, symbol: String)], log: UIView) {
         super.init(frame: .zero)
-        let backdrop = Theme.backdrop(image: "StartBackground")
+        // AMMAR YT's own dark navy / cyan identity; no upstream background artwork.
+        let backdrop = GradientView(
+            colors: [UIColor(red: 0.025, green: 0.055, blue: 0.105, alpha: 1),
+                     UIColor(red: 0.075, green: 0.12, blue: 0.22, alpha: 1),
+                     Theme.night],
+            locations: [0, 0.55, 1], horizontal: false)
         pin(backdrop, to: self)
 
-        let icon = UIImageView(image: UIImage(named: "HomeIcon"))
+        let icon = UIImageView(image: UIImage(systemName: "gamecontroller.fill"))
+        icon.contentMode = .scaleAspectFit
+        icon.tintColor = Theme.accent
+        icon.backgroundColor = Theme.accent.withAlphaComponent(0.12)
         icon.layer.cornerRadius = 14
         icon.layer.cornerCurve = .continuous
         icon.clipsToBounds = true
@@ -63,7 +75,7 @@ final class HomeView: UIView {
         title.adjustsFontSizeToFitWidth = true
         title.minimumScaleFactor = 0.7
         let subtitle = brandSubtitle
-        subtitle.text = AppLanguage.choose("Fan project · plays your own game files") + " · \(Theme.appVersion)"
+        subtitle.text = "نسختك الخاصة. تجربة جديدة. · \(Theme.appVersion)"
         subtitle.font = Theme.body(14, .medium)
         subtitle.textColor = Theme.secondaryText
         subtitle.numberOfLines = 2		// long translations keep the version visible
@@ -129,7 +141,22 @@ final class HomeView: UIView {
         mapRow.spacing = 8
         mapRow.alignment = .center
         mapRow.isHidden = true
-        let column = UIStackView(arrangedSubviews: [header, filesCard, modes, modeDetail, mapRow, playButton, preloadLabel, controllerLabel])
+        // These buttons open the real iOS game-data downloader, mod installer and settings.
+        // They are not links to the standalone preview or placeholder alerts.
+        let quickActions = UIStackView(arrangedSubviews: [dataButton, modsButton, quickSettingsButton])
+        quickActions.axis = .horizontal
+        quickActions.spacing = 8
+        quickActions.distribution = .fillEqually
+        for button in [dataButton, modsButton, quickSettingsButton] {
+            button.configuration?.contentInsets = NSDirectionalEdgeInsets(top: 11, leading: 5, bottom: 11, trailing: 5)
+            button.configuration?.imagePadding = 4
+            button.configuration?.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer {
+                var attributes = $0
+                attributes.font = Theme.body(12, .semibold)
+                return attributes
+            }
+        }
+        let column = UIStackView(arrangedSubviews: [header, filesCard, modes, modeDetail, mapRow, playButton, quickActions, preloadLabel, controllerLabel])
         column.axis = .vertical
         column.spacing = 12
         column.setCustomSpacing(18, after: header)
@@ -138,6 +165,7 @@ final class HomeView: UIView {
         column.setCustomSpacing(14, after: modeDetail)
         column.setCustomSpacing(14, after: mapRow)
         column.setCustomSpacing(10, after: playButton)
+        column.setCustomSpacing(10, after: quickActions)
         column.alignment = .fill
 
         let scroll = self.scroll
@@ -194,7 +222,7 @@ final class HomeView: UIView {
     private let secondary = UIStackView()
     func refreshLanguage() {
         brandTitle.text = "AMMAR YT GTA V"
-        brandSubtitle.text = AppLanguage.choose("Fan project · plays your own game files") + " · \(Theme.appVersion)"
+        brandSubtitle.text = "نسختك الخاصة. تجربة جديدة. · \(Theme.appVersion)"
         mapTitle.text = AppLanguage.choose("Map")
         playButton.configuration?.title = AppLanguage.choose("Play")
         // The top-right buttons are icons in every language (long titles overlapped the column, GTA-47);

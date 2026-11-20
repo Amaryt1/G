@@ -107,7 +107,12 @@ final class ModsViewController: UITableViewController, UIDocumentPickerDelegate 
             picker.allowsMultipleSelection = false
             present(picker, animated: true)
         } else if indexPath.row == 2 {
-            if let url = URL(string: "https://fivestarport.site/mods/") { UIApplication.shared.open(url) }
+            let alert = UIAlertController(
+                title: "دليل مودات AMMAR YT",
+                message: "يمكنك استيراد ZIP أو OIV أو ASI أو ملفات مودات مدعومة، وعرض المودات المثبتة وتفعيلها أو تعطيلها. مودات السيارات والخرائط تحتاج ملفات اللعبة المحلية المتوافقة. تغييرات المودات تطبق غالبًا بعد إعادة تشغيل اللعبة. احتفظ بنسخة من ملفاتك الأصلية.",
+                preferredStyle: .alert)
+            alert.addAction(UIAlertAction(title: "حسنًا", style: .default))
+            present(alert, animated: true)
         } else {
             showInFiles(ModInstaller.modsFolder)
         }
