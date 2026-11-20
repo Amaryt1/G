@@ -21,7 +21,7 @@ enum AMMARBuild {
     // The preview Xcode project is generated locally and can keep stale build
     // settings after a GitHub Pull. This constant updates the visible version
     // immediately; bump it with every visible change.
-    static let version = "0.3.0"
+    static let version = "0.3.1"
 }
 
 // Actions are only connected to a real engine in the native Xcode target.
@@ -140,7 +140,6 @@ struct PreviewRoot: View {
 private struct HomeScreen: View {
     @ObservedObject var bridge: AMMARLauncherBridge
     let openData: () -> Void
-    @State private var showPlayNotice = false
 
     var body: some View {
         PreviewBackground {
@@ -222,10 +221,18 @@ private struct HomeScreen: View {
                         if bridge.nativeAvailable {
                             bridge.onPlay?(bridge.selectedMode)
                         } else {
-                            showPlayNotice = true
+                            // A UI preview cannot open a native GTA engine it does not contain.
+                            // Navigate directly to the available data setup without a fake
+                            // "game launched" alert.
+                            openData()
                         }
                     } label: {
-                        Label(bridge.launching ? "جارٍ تشغيل اللعبة…" : "تشغيل اللعبة", systemImage: bridge.launching ? "hourglass" : "play.fill")
+                        Label(
+                            bridge.nativeAvailable
+                                ? (bridge.launching ? "جارٍ تشغيل اللعبة…" : "تشغيل اللعبة")
+                                : "فتح إعدادات اللعبة",
+                            systemImage: bridge.nativeAvailable ? "play.fill" : "externaldrive.fill"
+                        )
                             .font(.headline)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 17)
@@ -236,7 +243,7 @@ private struct HomeScreen: View {
                     .disabled(bridge.launching)
 
                     Button(action: openData) {
-                        Label("إعداد مصدر الداتا", systemImage: "externaldrive.fill.badge.plus")
+                        Label("إدارة رابط الداتا", systemImage: "externaldrive.fill.badge.plus")
                             .font(.headline)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)
@@ -257,12 +264,6 @@ private struct HomeScreen: View {
                 }
                 .padding(20)
             }
-        }
-        .alert("نسخة معاينة فقط", isPresented: $showPlayNotice) {
-            Button("الانتقال إلى الداتا") { openData() }
-            Button("حسنًا", role: .cancel) {}
-        } message: {
-            Text("هذه النسخة تُظهر التصميم وتفحص الملفات فقط. تشغيل GTA V يحتاج إصدار المحرك المدمج وملفات اللعبة المتوافقة؛ انتقل إلى الداتا أو استخدم نسخة اللعبة الأصلية بعد بنائها.")
         }
     }
 }
