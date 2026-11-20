@@ -30,6 +30,7 @@ final class AMMARLauncherBridge: ObservableObject {
     @Published var nativeAvailable = false
     @Published var dataReady = false
     @Published var dataBusy = false
+    @Published var launching = false
     @Published var selectedMode = 0 // 0 = Story; 1 = Sandbox
     var onPlay: ((Int) -> Void)?
     var onData: (() -> Void)?
@@ -224,7 +225,7 @@ private struct HomeScreen: View {
                             showPlayNotice = true
                         }
                     } label: {
-                        Label("تشغيل اللعبة", systemImage: "play.fill")
+                        Label(bridge.launching ? "جارٍ تشغيل اللعبة…" : "تشغيل اللعبة", systemImage: bridge.launching ? "hourglass" : "play.fill")
                             .font(.headline)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 17)
@@ -232,6 +233,7 @@ private struct HomeScreen: View {
                             .background(Brand.cyan, in: RoundedRectangle(cornerRadius: 18))
                     }
                     .buttonStyle(.plain)
+                    .disabled(bridge.launching)
 
                     Button(action: openData) {
                         Label("إعداد مصدر الداتا", systemImage: "externaldrive.fill.badge.plus")
