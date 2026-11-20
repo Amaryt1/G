@@ -184,7 +184,7 @@ private struct HomeScreen: View {
 private struct DataScreen: View {
     @AppStorage("authorizedDataSourceURL") private var savedURL = ""
     @State private var draftURL = ""
-    @State private var selectedFile = ""
+    @State private var selectedFileReport: PreviewFileReport?
     @State private var showingImporter = false
     @State private var showingAlert = false
     @State private var alertMessage = ""
@@ -195,7 +195,7 @@ private struct DataScreen: View {
                 VStack(alignment: .leading, spacing: 18) {
                     Text("إدارة الداتا")
                         .font(.largeTitle.bold())
-                    Text("جرّب حفظ رابط لمصدر ملفات تملك حق استخدامه. هذا النموذج لا يقوم بتنزيل الداتا ولا استخراجها.")
+                    Text("احفظ رابطًا مصرحًا به وافحص أرشيفًا أو مجلد ملفات محليًا. هذه المعاينة لا تنزّل ولا تستخرج الداتا.")
                         .font(.subheadline)
                         .foregroundStyle(Brand.muted)
 
@@ -245,10 +245,14 @@ private struct DataScreen: View {
                             }
                             .tint(Brand.cyan)
 
-                            Text(selectedFile.isEmpty ? "لم تختر ملفًا بعد" : "الملف المختار: \(selectedFile)")
-                                .font(.subheadline)
-                                .foregroundStyle(Brand.muted)
-                            Text("الاختيار يعرض اسم الملف فقط، ولا يستورد بيانات اللعبة فعليًا.")
+                            if let report = selectedFileReport {
+                                FileReportCard(report: report)
+                            } else {
+                                Text("لم تختر ملفًا بعد")
+                                    .font(.subheadline)
+                                    .foregroundStyle(Brand.muted)
+                            }
+                            Text("الفحص لا ينسخ أي بيانات، ولا يثبت أرشيف اللعبة أو المودات.")
                                 .font(.caption)
                                 .foregroundStyle(Brand.muted)
                         }
@@ -265,7 +269,7 @@ private struct DataScreen: View {
         ) { result in
             switch result {
             case .success(let urls):
-                selectedFile = urls.first?.lastPathComponent ?? ""
+                if let url = urls.first { selectedFileReport = PreviewFileInspector.inspect(url) }
             case .failure(let error):
                 alertMessage = "لم يُفتح الملف: \(error.localizedDescription)"
                 showingAlert = true
@@ -295,6 +299,10 @@ private struct DataScreen: View {
 }
 
 private struct ModsScreen: View {
+    @State private var showingModImporter = false
+    @State private var selectedModReport: PreviewFileReport?
+    @State private var modImportError = ""
+
     var body: some View {
         PreviewBackground {
             ScrollView {
@@ -308,11 +316,51 @@ private struct ModsScreen: View {
                     feature("الشخصيات", symbol: "person.crop.square", description: "إدارة نماذج الشخصيات والملابس المدعومة")
                     feature("AMMAR MOD MENU", symbol: "slider.horizontal.3", description: "خيارات اللعب والغش التي يدعمها المحرك فعليًا")
                     feature("الوضع الآمن", symbol: "shield.lefthalf.filled", description: "تشغيل اللعبة بدون مودات عند وقوع مشكلة")
-                    Text("هذه الأقسام للمعاينة فقط؛ لا تثبّت أو تشغّل مودات في نسخة Preview.")
-                        .font(.caption)
-                        .foregroundStyle(Brand.muted)
+                    PreviewPanel {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Label("فحص ملف مود محلي", systemImage: "doc.zipper")
+                                .font(.headline)
+                                .foregroundStyle(Brand.cyan)
+                            Button {
+                                showingModImporter = true
+                            } label: {
+                                Label("اختيار ZIP / OIV / ملف مود", systemImage: "square.and.arrow.down")
+                            }
+                            .tint(Brand.cyan)
+                            if let report = selectedModReport {
+                                FileReportCard(report: report)
+                            } else {
+                                Text("يمكن اختيار ملف تجريبي وعرض حجمه وبصمته عند صغر حجمه.")
+                                    .font(.subheadline)
+                                    .foregroundStyle(Brand.muted)
+                            }
+                            if !modImportError.isEmpty {
+                                Text(modImportError)
+                                    .font(.footnote)
+                                    .foregroundStyle(.orange)
+                            }
+                            Text("الفحص فقط: لن تُثبت المودات أو تُنفّذ داخل اللعبة.")
+                                .font(.caption)
+                                .foregroundStyle(Brand.muted)
+                        }
+                    }
                 }
                 .padding(20)
+            }
+        }
+        .fileImporter(
+            isPresented: $showingModImporter,
+            allowedContentTypes: [.zip, .archive, .data],
+            allowsMultipleSelection: false
+        ) { result in
+            switch result {
+            case .success(let urls):
+                if let url = urls.first {
+                    selectedModReport = PreviewFileInspector.inspect(url)
+                    modImportError = ""
+                }
+            case .failure(let error):
+                modImportError = "فشل فتح الملف: \(error.localizedDescription)"
             }
         }
     }
@@ -353,7 +401,7 @@ private struct AboutScreen: View {
                             Label("AMMAR YT GTA V", systemImage: "gamecontroller")
                                 .font(.title3.bold())
                                 .foregroundStyle(Brand.cyan)
-                            Text("واجهة تجريبية — v0.1.0")
+                            Text("واجهة تجريبية — v0.2.0")
                             Text("iPhone / iPad • iOS 16+")
                             Text("لا تحتوي هذه النسخة على بيانات اللعبة أو محرك GTA V.")
                                 .font(.subheadline)
@@ -364,7 +412,7 @@ private struct AboutScreen: View {
                         VStack(alignment: .leading, spacing: 8) {
                             Label("الخصوصية", systemImage: "lock.shield")
                                 .font(.headline)
-                            Text("لا تجمع هذه المعاينة إحصائيات ولا ترسل سجلّات أو بيانات إلى خدمات المطور الأصلي. يُحفظ عنوان الداتا الذي تدخله محليًا في إعدادات التطبيق.")
+                            Text("لا تجمع هذه المعاينة إحصائيات ولا تتصل بخدمات المطور الأصلي. رابط الداتا محفوظ محليًا، وفحص الملفات لا يرسل محتوياتها إلى أي خادم.")
                                 .font(.subheadline)
                                 .foregroundStyle(Brand.muted)
                         }
@@ -380,6 +428,38 @@ private struct AboutScreen: View {
                     }
                 }
                 .padding(20)
+            }
+        }
+    }
+}
+
+
+// Shared detail card for non-destructive file inspection.
+private struct FileReportCard: View {
+    let report: PreviewFileReport
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            Label(report.name, systemImage: "doc.text.magnifyingglass")
+                .font(.subheadline.bold())
+                .lineLimit(2)
+            HStack {
+                Text("النوع: \(report.kind)")
+                Spacer()
+                Text(report.size)
+            }
+            .font(.caption)
+            .foregroundStyle(Brand.muted)
+            Text(report.detail)
+                .font(.caption)
+                .foregroundStyle(Brand.muted)
+                .fixedSize(horizontal: false, vertical: true)
+            if let digest = report.sha256 {
+                Text("SHA-256: \(digest)")
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(Brand.cyan)
+                    .textSelection(.enabled)
+                    .environment(\.layoutDirection, .leftToRight)
             }
         }
     }
