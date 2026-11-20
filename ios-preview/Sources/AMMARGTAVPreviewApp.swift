@@ -18,10 +18,10 @@ struct AMMARGTAVPreviewApp: App {
 #endif
 
 enum AMMARBuild {
-    // Always read the built app's version: avoid stale hardcoded text after Pull.
-    static var version: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.3.0"
-    }
+    // The preview Xcode project is generated locally and can keep stale build
+    // settings after a GitHub Pull. This constant updates the visible version
+    // immediately; bump it with every visible change.
+    static let version = "0.3.0"
 }
 
 // Actions are only connected to a real engine in the native Xcode target.
