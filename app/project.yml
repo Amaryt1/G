@@ -122,7 +122,7 @@ targets:
       properties:
         CFBundleDisplayName: AMMAR YT GTA V
         CFBundleDevelopmentRegion: en
-        CFBundleShortVersionString: "0.3.0"
+        CFBundleShortVersionString: "0.3.1"
         # Your game-file server may be a plain-http address on your tailnet.
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: true
@@ -135,7 +135,7 @@ targets:
         # The app folder (logs) is visible in the Files app.
         UIFileSharingEnabled: true
         LSSupportsOpeningDocumentsInPlace: true
-        CFBundleVersion: "21"
+        CFBundleVersion: "22"
         UILaunchScreen: {}
         # The scene lifecycle (GTA-171): an app built with the iOS 27 SDK stops at launch without it. One window
         # (AppDelegate.swift, SceneDelegate); a TV (AirPlay or HDMI) gets its own scene for the game's picture (TVSceneDelegate).
