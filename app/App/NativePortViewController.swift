@@ -823,6 +823,66 @@ final class NativePortViewController: UIViewController, MTKViewDelegate {
         ammarBridge.dataBusy = GameInstallManager.shared.isRunning
     }
 
+    #if !targetEnvironment(macCatalyst)
+    private func requestAMMARPortraitIfNeeded() {
+        guard ammarHost != nil, !ammarPortraitRequested, !ammarWantsLandscape,
+              !engineStarted, let scene = view.window?.windowScene else { return }
+        ammarPortraitRequested = true
+        setNeedsUpdateOfSupportedInterfaceOrientations()
+        scene.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait)) { [weak self] error in
+            // The launcher remains usable even if the device declines rotation.
+            DispatchQueue.main.async {
+                self?.appendLog("AMMAR: initial portrait rotation unavailable: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func requestAMMARLandscapeForGame() {
+        guard let scene = view.window?.windowScene else {
+            ammarBridge.launching = false
+            showWhenFree(title: "تعذّر بدء اللعبة",
+                         message: "لم تصبح نافذة اللعبة جاهزة لتغيير الاتجاه. حاول مرة أخرى.")
+            return
+        }
+        ammarWantsLandscape = true
+        setNeedsUpdateOfSupportedInterfaceOrientations()
+        scene.requestGeometryUpdate(.iOS(interfaceOrientations: .landscape)) { [weak self] error in
+            DispatchQueue.main.async {
+                guard let self, !self.engineStarted else { return }
+                self.ammarWantsLandscape = false
+                self.ammarBridge.launching = false
+                self.setNeedsUpdateOfSupportedInterfaceOrientations()
+                self.appendLog("AMMAR: landscape orientation failed: \(error.localizedDescription)")
+                self.showWhenFree(title: "تعذّر تدوير الشاشة",
+                                  message: "لم يسمح iOS بالانتقال إلى الوضع الأفقي: \(error.localizedDescription)")
+            }
+        }
+        continueAMMARBootAfterRotation(remaining: 15)
+    }
+
+    private func continueAMMARBootAfterRotation(remaining: Int) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
+            guard let self, self.ammarWantsLandscape, !self.engineStarted else { return }
+            let landscape = self.view.window?.windowScene?.interfaceOrientation.isLandscape == true
+            let wide = self.view.bounds.width >= self.view.bounds.height
+            if landscape && wide {
+                // The game reads the final display dimensions at engine start.
+                // Calling the original handler keeps all file and shader guards.
+                self.startEngine()
+            } else if remaining > 0 {
+                self.continueAMMARBootAfterRotation(remaining: remaining - 1)
+            } else {
+                self.ammarWantsLandscape = false
+                self.ammarBridge.launching = false
+                self.setNeedsUpdateOfSupportedInterfaceOrientations()
+                self.appendLog("AMMAR: orientation timed out before engine launch.")
+                self.showWhenFree(title: "تعذّر تدوير الشاشة",
+                                  message: "لم يتم الانتقال للوضع الأفقي. افتح التطبيق مرة أخرى أو جرّب تعطيل قفل اتجاه الشاشة.")
+            }
+        }
+    }
+    #endif
+
     private func startFromAMMARLauncher(mode: Int) {
         // "Play" enters the real native port shell even when game assets are absent.
         // Game files are required for the *game world*, not for using the port's
@@ -1427,6 +1487,7 @@ final class NativePortViewController: UIViewController, MTKViewDelegate {
     override func viewIsAppearing(_ animated: Bool) {
         super.viewIsAppearing(animated)
         followSceneWithDisplayLink()
+        requestAMMARPortraitIfNeeded()
     }
     private func followSceneWithDisplayLink() {
         guard #available(iOS 27, *), let scene = view.window?.windowScene, scene !== displayLinkScene else { return }
