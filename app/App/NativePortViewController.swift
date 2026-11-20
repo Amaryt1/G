@@ -496,6 +496,10 @@ final class NativePortViewController: UIViewController, MTKViewDelegate {
         NotificationCenter.default.addObserver(self, selector: #selector(languageChanged), name: AppLanguage.changed, object: nil)
         home.settingsButton.addAction(UIAction { [weak self] _ in self?.showSettings() }, for: .touchUpInside)
         home.layoutButton.addAction(UIAction { [weak self] _ in self?.showLayoutEditor() }, for: .touchUpInside)
+        // AMMAR YT launcher: all shortcuts use the original engine host's real screens.
+        home.dataButton.addAction(UIAction { [weak self] _ in self?.showGameFiles() }, for: .touchUpInside)
+        home.modsButton.addAction(UIAction { [weak self] _ in self?.showInstalledMods() }, for: .touchUpInside)
+        home.quickSettingsButton.addAction(UIAction { [weak self] _ in self?.showSettings() }, for: .touchUpInside)
         home.onFiles = { [weak self] in self?.showGameFiles() }
         home.onMap = { [weak self] index in
             guard let self, !self.engineStarted else { return }
@@ -522,6 +526,9 @@ final class NativePortViewController: UIViewController, MTKViewDelegate {
         if let index = arguments.firstIndex(of: "--game-mode"), index + 1 < arguments.count {
             GameSettings.shared.gameMode = arguments[index + 1] == "story" ? .story : .sandbox
         }
+        // A first-time user can tap Play directly after adding game files.
+        // Story mode is the initial choice; the visible mode cards still allow Sandbox.
+        if GameSettings.shared.gameModeChoice == nil { GameSettings.shared.gameMode = .story }
         refreshModeChoice()
         home.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(home)
@@ -701,11 +708,9 @@ final class NativePortViewController: UIViewController, MTKViewDelegate {
                 self.appendLog("App \(label).")
             }
         }
-        // A newer release on GitHub: say so once per version, pointing to the Telegram group.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
-            guard let self else { return }
-            UpdateCheck.run(from: self) { [weak self] line in DispatchQueue.main.async { self?.appendLog(line) } }
-        }
+        // AMMAR YT is independent from the upstream release service.
+        // Do not send automatic update checks to fivestarport.site.
+        // A future updater must be opt-in and point at a service we control.
         // GTA-153: after an update, mods the previous version had on but didn't use stay off; after a start with
         // mods that didn't finish, the mods are the first suspect (17% of starts with mods failed on v1.4.4, 1.5% without).
         let modsSwitchedOff = ModGuard.afterUpdate()
@@ -1614,6 +1619,21 @@ final class NativePortViewController: UIViewController, MTKViewDelegate {
         showWhenFree(title: AppLanguage.choose("Low memory on this device"), message: message)
         #endif
     }
+
+    /// Open the existing, functional installer and mod manager before game boot.
+    /// This is independent of the data-free SwiftUI preview target.
+    private func showInstalledMods() {
+        guard !engineStarted, presentedViewController == nil else { return }
+        let controller = ModsViewController()
+        controller.navigationItem.leftBarButtonItem = UIBarButtonItem(
+            barButtonSystemItem: .close, target: self, action: #selector(closeAMMARPanel))
+        let navigation = UINavigationController(rootViewController: controller)
+        Theme.styleNavigation(navigation)
+        navigation.modalPresentationStyle = .fullScreen
+        present(navigation, animated: true)
+    }
+
+    @objc private func closeAMMARPanel() { dismiss(animated: true) }
 
     private func showGameFiles() {
         guard !engineStarted, presentedViewController == nil else { return }
