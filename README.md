@@ -1,3 +1,28 @@
+# AMMAR YT GTA V — Native iOS Port Customization
+
+This repository is a customized fork of [kevinerikjs/gta5-ios-port](https://github.com/kevinerikjs/gta5-ios-port) for a **single iPhone/iPad app** with a custom Arabic AMMAR YT launcher, the original native GTA runtime integration, and the original Game Files / Mods / Settings screens. It is a fan project and is **not affiliated with Rockstar Games or Take-Two**.
+
+**Current AMMAR version:** `v0.3.2` (development; [review the native integration PR](https://github.com/Amaryt1/G/pull/7)).
+
+**What has been verified:** the standalone SwiftUI launcher compiles for iPhone Simulator, the native Swift launcher has passed syntax checks, and the no-Terminal Mac setup script compiles as AppleScript. **What has NOT been verified:** compiling or playing the GTA V engine on an iPhone from this customized branch. The engine/shader build inputs are not bundled in this repository.
+
+**Choose the right project:**
+
+- `app/` — **PlayGTA5Native**, the single real game app (SwiftUI AMMAR launcher + existing GTA/Metal renderer + original game data and mod handlers). This is the intended final IPA.
+- `ios-preview/` — lightweight design preview. It has **no game engine**, and its standalone scheme cannot run GTA V.
+- `tools/AMMAR_Native_Setup.applescript` — GUI setup through **Script Editor + Finder** for your own authorized, exact game files. It can prepare the real native Xcode project or package an unsigned IPA **only when the required engine/shaders are present**.
+- [Real native build, one-app integration, and QA status](docs/AMMAR_YT_REAL_IPA_BUILD_V032.md).
+
+**Mandatory input:** the supported Web build `8b0b5899ed`, including `data/manifest.json`, `b/8b0b5899ed/game.wasm`, the matching shader index and all packs, from files you are legally authorized to use. At build time the game engine is converted to ARM64 and its shaders are precompiled into Metal. The large runtime gameplay data can then be imported through the original in-app Game Files manager. There is no authorized game-engine download or GTA game data in this public repository. The original integrity checks remain enabled.
+
+---
+
+## Original upstream project documentation (for reference)
+
+The sections below document the source project and may reference its original release channels, branding or user interface. They are **not instructions to install an AMMAR build**. Follow the AMMAR build guide above for this customized fork.
+
+---
+
 # GTA V on iPhone (5★ Port)
 
 > [!IMPORTANT]
