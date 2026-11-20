@@ -8,6 +8,8 @@ settings:
     # builds an unsigned IPA that AltStore/SideStore signs with your Apple ID).
     DEVELOPMENT_TEAM: ""
     SWIFT_VERSION: "5.0"
+    # Keep independent development builds from reporting gameplay to upstream stats.
+    SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) PG_NO_STATS"
     CODE_SIGN_STYLE: Automatic
     GCC_C_LANGUAGE_STANDARD: c11
     CLANG_CXX_LANGUAGE_STANDARD: c++20
@@ -104,7 +106,7 @@ targets:
       - sdk: libbz2.tbd
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: io.github.playgta5ios.app
+        PRODUCT_BUNDLE_IDENTIFIER: com.amaryt1.ammarytgtav
         PRODUCT_NAME: PlayGTA5Native
         TARGETED_DEVICE_FAMILY: "1,2"
         # The same app runs on Apple Silicon Macs through Mac Catalyst (GTA-9, Scripts/build_mac.sh).
@@ -116,7 +118,7 @@ targets:
     info:
       path: App/Info.plist
       properties:
-        CFBundleDisplayName: GTA V Port
+        CFBundleDisplayName: AMMAR YT GTA V
         CFBundleDevelopmentRegion: en
         CFBundleShortVersionString: "1.5.2"
         # Your game-file server may be a plain-http address on your tailnet.
