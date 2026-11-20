@@ -2,8 +2,9 @@ import SwiftUI
 import UniformTypeIdentifiers
 import CryptoKit
 
-// AMMAR YT GTA V — UI-only iPhone/iPad preview.
-// This target intentionally DOES NOT contain the GTA V engine or game files.
+// Shared AMMAR YT launcher. The preview compiles without GTA V; native engine
+// builds compile the same screen with AMMAR_NATIVE and their own AppDelegate.
+#if !AMMAR_NATIVE
 @main
 struct AMMARGTAVPreviewApp: App {
     var body: some Scene {
@@ -13,6 +14,27 @@ struct AMMARGTAVPreviewApp: App {
                 .environment(\.layoutDirection, .rightToLeft)
         }
     }
+}
+#endif
+
+enum AMMARBuild {
+    // Always read the built app's version: avoid stale hardcoded text after Pull.
+    static var version: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.3.0"
+    }
+}
+
+// Actions are only connected to a real engine in the native Xcode target.
+// Preview mode has no engine and deliberately cannot fake a successful launch.
+final class AMMARLauncherBridge: ObservableObject {
+    @Published var nativeAvailable = false
+    @Published var dataReady = false
+    @Published var dataBusy = false
+    @Published var selectedMode = 0 // 0 = Story; 1 = Sandbox
+    var onPlay: ((Int) -> Void)?
+    var onData: (() -> Void)?
+    var onMods: (() -> Void)?
+    var onSettings: (() -> Void)?
 }
 
 private enum Brand {
@@ -62,21 +84,51 @@ private struct PreviewPanel<Content: View>: View {
     }
 }
 
-private struct PreviewRoot: View {
+struct PreviewRoot: View {
+    @ObservedObject var bridge: AMMARLauncherBridge
     @State private var tab = 0
+
+    init(bridge: AMMARLauncherBridge = AMMARLauncherBridge()) {
+        self.bridge = bridge
+    }
 
     var body: some View {
         TabView(selection: $tab) {
-            HomeScreen(openData: { tab = 1 })
+            HomeScreen(bridge: bridge, openData: { tab = 1 })
                 .tabItem { Label("الرئيسية", systemImage: "house.fill") }
                 .tag(0)
-            DataScreen()
-                .tabItem { Label("الداتا", systemImage: "square.and.arrow.down") }
-                .tag(1)
-            ModsScreen()
-                .tabItem { Label("المودات", systemImage: "car.side.fill") }
-                .tag(2)
-            AboutScreen()
+
+            Group {
+                if bridge.nativeAvailable {
+                    NativeGatewayScreen(
+                        title: "إدارة الداتا",
+                        icon: "externaldrive.fill.badge.plus",
+                        explanation: "افتح مدير ملفات اللعبة الحقيقي لاستيراد الداتا أو تحميل أرشيف متوافق من مصدر مصرح به.",
+                        buttonTitle: "فتح مدير الداتا",
+                        action: { bridge.onData?() })
+                } else {
+                    DataScreen()
+                }
+            }
+            .tabItem { Label("الداتا", systemImage: "square.and.arrow.down") }
+            .tag(1)
+
+            Group {
+                if bridge.nativeAvailable {
+                    NativeGatewayScreen(
+                        title: "المودات والسيارات",
+                        icon: "car.side.fill",
+                        explanation: "إدارة المودات الحقيقية، بما يشمل الاستيراد والتفعيل والتعطيل ضمن أنواع الملفات التي يدعمها المحرك.",
+                        buttonTitle: "فتح مدير المودات",
+                        action: { bridge.onMods?() })
+                } else {
+                    ModsScreen()
+                }
+            }
+            .tabItem { Label("المودات", systemImage: "car.side.fill") }
+            .tag(2)
+
+            AboutScreen(bridge: bridge)
                 .tabItem { Label("الإعدادات", systemImage: "gearshape.fill") }
                 .tag(3)
         }
@@ -85,6 +137,7 @@ private struct PreviewRoot: View {
 }
 
 private struct HomeScreen: View {
+    @ObservedObject var bridge: AMMARLauncherBridge
     let openData: () -> Void
     @State private var showPlayNotice = false
 
@@ -111,10 +164,22 @@ private struct HomeScreen: View {
                     Text("نسختك الخاصة. تجربة جديدة.")
                         .font(.title3.bold())
 
-                    Text("واجهة تجريبية مستقلة للآيفون والآيباد — لا تتضمن المحرك أو بيانات لعبة GTA V.")
+                    Text(bridge.nativeAvailable
+                         ? "واجهة اللعبة الأصلية: اختر وضع اللعب، واضبط الداتا، ثم ابدأ التشغيل."
+                         : "واجهة تجريبية مستقلة للآيفون والآيباد — لا تتضمن المحرك أو بيانات لعبة GTA V.")
                         .font(.subheadline)
                         .foregroundStyle(Brand.muted)
                         .fixedSize(horizontal: false, vertical: true)
+
+                    HStack {
+                        Text("إصدار التطبيق")
+                        Spacer()
+                        Text("v\(AMMARBuild.version)")
+                            .font(.caption.bold().monospacedDigit())
+                            .foregroundStyle(Brand.cyan)
+                    }
+                    .font(.footnote)
+                    .foregroundStyle(Brand.muted)
 
                     PreviewPanel {
                         VStack(alignment: .leading, spacing: 14) {
@@ -129,18 +194,35 @@ private struct HomeScreen: View {
                             HStack {
                                 Text("محرك اللعبة")
                                 Spacer()
-                                Text("غير مدمج").foregroundStyle(.orange)
+                                Text(bridge.nativeAvailable ? "متصل بالتطبيق" : "غير مدمج")
+                                    .foregroundStyle(bridge.nativeAvailable ? .green : .orange)
                             }
                             HStack {
                                 Text("ملفات الداتا")
                                 Spacer()
-                                Text("غير متوفرة").foregroundStyle(.orange)
+                                Text(bridge.dataReady ? "تم تحديد المصدر" : "غير متوفرة")
+                                    .foregroundStyle(bridge.dataReady ? .green : .orange)
                             }
                         }
                     }
 
+                    PreviewPanel {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("وضع اللعب").font(.headline)
+                            Picker("وضع اللعب", selection: $bridge.selectedMode) {
+                                Text("القصة").tag(0)
+                                Text("التجوال الحر").tag(1)
+                            }
+                            .pickerStyle(.segmented)
+                        }
+                    }
+
                     Button {
-                        showPlayNotice = true
+                        if bridge.nativeAvailable {
+                            bridge.onPlay?(bridge.selectedMode)
+                        } else {
+                            showPlayNotice = true
+                        }
                     } label: {
                         Label("تشغيل اللعبة", systemImage: "play.fill")
                             .font(.headline)
@@ -174,10 +256,11 @@ private struct HomeScreen: View {
                 .padding(20)
             }
         }
-        .alert("نسخة واجهة فقط", isPresented: $showPlayNotice) {
+        .alert("نسخة معاينة فقط", isPresented: $showPlayNotice) {
+            Button("الانتقال إلى الداتا") { openData() }
             Button("حسنًا", role: .cancel) {}
         } message: {
-            Text("زر التشغيل لن يبدأ GTA V حتى نبني المحرك من ملفات متوافقة ومصرح باستخدامها ونربطه بهذا التطبيق.")
+            Text("هذه النسخة تُظهر التصميم وتفحص الملفات فقط. تشغيل GTA V يحتاج إصدار المحرك المدمج وملفات اللعبة المتوافقة؛ انتقل إلى الداتا أو استخدم نسخة اللعبة الأصلية بعد بنائها.")
         }
     }
 }
@@ -391,6 +474,8 @@ private struct ModsScreen: View {
 }
 
 private struct AboutScreen: View {
+    @ObservedObject var bridge: AMMARLauncherBridge
+
     var body: some View {
         PreviewBackground {
             ScrollView {
@@ -402,12 +487,27 @@ private struct AboutScreen: View {
                             Label("AMMAR YT GTA V", systemImage: "gamecontroller")
                                 .font(.title3.bold())
                                 .foregroundStyle(Brand.cyan)
-                            Text("واجهة تجريبية — v0.2.0")
+                            Text(bridge.nativeAvailable ? "نسخة المحرك — v\(AMMARBuild.version)" : "واجهة تجريبية — v\(AMMARBuild.version)")
                             Text("iPhone / iPad • iOS 16+")
-                            Text("لا تحتوي هذه النسخة على بيانات اللعبة أو محرك GTA V.")
+                            Text(bridge.nativeAvailable
+                                 ? "تطبيق المحرك الأصلي. تحتاج إلى بيانات لعبة متوافقة قبل التشغيل."
+                                 : "لا تحتوي هذه النسخة على بيانات اللعبة أو محرك GTA V.")
                                 .font(.subheadline)
                                 .foregroundStyle(Brand.muted)
                         }
+                    }
+                    if bridge.nativeAvailable {
+                        Button {
+                            bridge.onSettings?()
+                        } label: {
+                            Label("فتح الإعدادات الحقيقية", systemImage: "gearshape.fill")
+                                .font(.headline)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 16)
+                                .foregroundStyle(Brand.navy)
+                                .background(Brand.cyan, in: RoundedRectangle(cornerRadius: 18))
+                        }
+                        .buttonStyle(.plain)
                     }
                     PreviewPanel {
                         VStack(alignment: .leading, spacing: 8) {
@@ -568,5 +668,49 @@ enum PreviewFileInspector {
             hasher.update(data: chunk)
         }
         return hasher.finalize().map { String(format: "%02x", $0) }.joined()
+    }
+}
+
+
+
+// Reuses the exact preview design in the real native game without showing
+// misleading preview-only URL forms or fake mod installation controls.
+private struct NativeGatewayScreen: View {
+    let title: String
+    let icon: String
+    let explanation: String
+    let buttonTitle: String
+    let action: () -> Void
+
+    var body: some View {
+        PreviewBackground {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    Text(title).font(.largeTitle.bold())
+                    PreviewPanel {
+                        VStack(alignment: .leading, spacing: 14) {
+                            Label(title, systemImage: icon)
+                                .font(.headline)
+                                .foregroundStyle(Brand.cyan)
+                            Text(explanation)
+                                .font(.subheadline)
+                                .foregroundStyle(Brand.muted)
+                            Button(action: action) {
+                                Label(buttonTitle, systemImage: "arrow.up.right.square")
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 15)
+                                    .foregroundStyle(Brand.navy)
+                                    .background(Brand.cyan, in: RoundedRectangle(cornerRadius: 15))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    Text("تستخدم هذه الشاشة مدير البيانات أو المودات الفعلي الموجود في مشروع المحرك.")
+                        .font(.caption)
+                        .foregroundStyle(Brand.muted)
+                }
+                .padding(20)
+            }
+        }
     }
 }
