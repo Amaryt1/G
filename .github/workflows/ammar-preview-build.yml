@@ -44,6 +44,8 @@ jobs:
           # native game engine, which requires the user's lawful game.wasm.
           xcrun swiftc -frontend -parse app/App/NativePortViewController.swift
           python3 -m compileall -q app/Scripts
+          # Compile the GUI setup wizard without executing a game build.
+          osacompile -o /tmp/AMMAR_Native_Setup.scpt tools/AMMAR_Native_Setup.applescript
           python3 - <<'PY'
           from pathlib import Path
           native = Path("app/App/NativePortViewController.swift").read_text()
