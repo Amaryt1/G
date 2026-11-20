@@ -3,7 +3,7 @@ name: AMMAR YT - Preview iOS build
 on:
   push:
     branches:
-      - feature/ammar-yt-v030-play-bridge
+      - "feature/ammar-yt-*"
   pull_request:
     paths:
       - "ios-preview/**"
