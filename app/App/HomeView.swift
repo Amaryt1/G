@@ -23,7 +23,6 @@ final class HomeView: UIView {
     let playButton = Theme.primaryButton(AppLanguage.choose("Play"), symbol: "play.fill")
     let settingsButton = Theme.glassButton(AppLanguage.choose("Settings"), symbol: "gearshape.fill")
     let layoutButton = Theme.glassButton(AppLanguage.choose("Controls layout"), symbol: "hand.tap.fill")
-    let telegramButton = Theme.glassButton(AppLanguage.choose("Telegram"), symbol: "paperplane.fill")
     let preloadLabel = UILabel()
     let controllerLabel = UILabel()
     /// Taps on the game files card.
@@ -58,7 +57,7 @@ final class HomeView: UIView {
         icon.widthAnchor.constraint(equalToConstant: 52).isActive = true
         icon.heightAnchor.constraint(equalToConstant: 52).isActive = true
         let title = brandTitle
-        title.text = AppLanguage.choose("GTA V Port")
+        title.text = "AMMAR YT GTA V"
         title.font = Theme.display(30)
         title.textColor = Theme.text
         title.adjustsFontSizeToFitWidth = true
@@ -91,17 +90,15 @@ final class HomeView: UIView {
         modeDetail.adjustsFontSizeToFitWidth = true
         modeDetail.minimumScaleFactor = 0.8
 
-        telegramButton.addAction(UIAction { _ in UIApplication.shared.open(Theme.telegramURL) }, for: .touchUpInside)
-        telegramButton.accessibilityLabel = AppLanguage.choose("Five Star Port on Telegram")
         let secondary = self.secondary
         // Icons only, in every language; the names stay for VoiceOver.
         settingsButton.accessibilityLabel = AppLanguage.choose("Settings")
         layoutButton.accessibilityLabel = AppLanguage.choose("Controls layout")
-        for button in [telegramButton, layoutButton, settingsButton] { button.configuration?.title = nil }
+        for button in [layoutButton, settingsButton] { button.configuration?.title = nil }
         #if targetEnvironment(macCatalyst)
-        secondary.addArrangedSubviews([telegramButton, settingsButton])   // no touch controls to lay out on a Mac
+        secondary.addArrangedSubviews([settingsButton])   // no touch controls to lay out on a Mac
         #else
-        secondary.addArrangedSubviews([telegramButton, layoutButton, settingsButton])
+        secondary.addArrangedSubviews([layoutButton, settingsButton])
         #endif
         secondary.spacing = 10
         secondary.translatesAutoresizingMaskIntoConstraints = false
@@ -196,7 +193,7 @@ final class HomeView: UIView {
     private let scroll = UIScrollView()
     private let secondary = UIStackView()
     func refreshLanguage() {
-        brandTitle.text = AppLanguage.choose("GTA V Port")
+        brandTitle.text = "AMMAR YT GTA V"
         brandSubtitle.text = AppLanguage.choose("Fan project · plays your own game files") + " · \(Theme.appVersion)"
         mapTitle.text = AppLanguage.choose("Map")
         playButton.configuration?.title = AppLanguage.choose("Play")
@@ -204,7 +201,6 @@ final class HomeView: UIView {
         // their names stay for VoiceOver.
         settingsButton.configuration?.title = nil
         layoutButton.configuration?.title = nil
-        telegramButton.configuration?.title = nil
         settingsButton.accessibilityLabel = AppLanguage.choose("Settings")
         layoutButton.accessibilityLabel = AppLanguage.choose("Controls layout")
         for (index, card) in modeCards.enumerated() {
