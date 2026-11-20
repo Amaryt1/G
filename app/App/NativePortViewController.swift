@@ -482,7 +482,7 @@ final class NativePortViewController: UIViewController, MTKViewDelegate {
             let title = button.isEnabled || !(self?.engineStarted ?? false) ? play : button.title(for: .disabled) ?? AppLanguage.choose("Loading…")
             var text = AttributedString(title)
             text.font = Theme.display(20, .heavy)
-            text.foregroundColor = button.isEnabled ? UIColor(red: 0.16, green: 0.07, blue: 0.02, alpha: 1) : UIColor(white: 1, alpha: 0.7)
+            text.foregroundColor = button.isEnabled ? Theme.night : UIColor(white: 1, alpha: 0.7)
             button.configuration?.attributedTitle = text
             button.configuration?.image = title == play ? UIImage(systemName: "play.fill", withConfiguration: UIImage.SymbolConfiguration(weight: .heavy)) : nil
         }
