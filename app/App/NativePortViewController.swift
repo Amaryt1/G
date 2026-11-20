@@ -464,7 +464,19 @@ final class NativePortViewController: UIViewController, MTKViewDelegate {
     // bar's space at the top of the iPhone Duo's outer screen, although the status bar is hidden (GTA-185).
     /// While playing with a mouse (iPad), the pointer is captured so moving it looks around.
     override var prefersPointerLocked: Bool { engineStarted && GameSettings.shared.keyboardMouse && KeyboardMouse.shared.hasMouse }
-    override var supportedInterfaceOrientations: UIInterfaceOrientationMask { .landscape }
+    // The AMMAR launcher starts in portrait. Only the real GTA renderer
+    // uses landscape; the original direct/test launch remains landscape.
+    #if !targetEnvironment(macCatalyst)
+    private var ammarWantsLandscape = false
+    private var ammarPortraitRequested = false
+    #endif
+    override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
+        #if targetEnvironment(macCatalyst)
+        return .landscape
+        #else
+        return ammarHost != nil && !ammarWantsLandscape && !engineStarted ? .portrait : .landscape
+        #endif
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -819,26 +831,21 @@ final class NativePortViewController: UIViewController, MTKViewDelegate {
         GameSettings.shared.gameMode = mode == 1 ? .sandbox : .story
         refreshModeChoice()
 
-        // The native HomeView below the SwiftUI launcher contains the original
-        // Game Files workflow (including the first-run add-data guide). Reveal
-        // it before invoking the original game boot handler, so missing data
-        // takes the user INSIDE that native UI instead of blocking the entry.
-        ammarHost?.view.isHidden = true
+        // Keep the branded launcher visible while the original port checks
+        // data and rotates the display. Its own Game Files screen presents
+        // above this host if assets are unavailable.
         ammarBridge.launching = true
 
         if GameInstallManager.shared.isRunning {
-            // Original screen shows the existing download progress.
             ammarBridge.launching = false
-            showGameFiles()
+            showGameFiles() // Existing real download-progress screen.
             return
         }
 
-        // Do not duplicate or bypass the engine's own data checks:
-        // startEngine() handles missing local files/servers and opens the real
-        // GameFilesViewController when needed. Once data is valid it proceeds
-        // to PGStartEngine using the original manifest and runtime.
+        // Only the original engine bootstrap may decide whether gameplay can
+        // start. It opens Game Files with its existing instructions if data is
+        // missing. Do not replace its checks with a fake success screen.
         startEngine()
-        if !engineStarted { ammarBridge.launching = false }
     }
 
     @objc private func preloadChanged() {
@@ -929,7 +936,7 @@ final class NativePortViewController: UIViewController, MTKViewDelegate {
             #endif
         }
         if line == "WORLD_READY" || line.contains("\"label\":\"First frame\"") {
-            // The native engine, not a demo, has produced its first game frame.
+            // Hide the launcher only when the real engine produced a frame.
             ammarHost?.view.isHidden = true
             diagnosticsOverlay?.isHidden = true
             #if !targetEnvironment(macCatalyst)
@@ -1018,6 +1025,9 @@ final class NativePortViewController: UIViewController, MTKViewDelegate {
         }
         guard let path = EnginePaths.manifest else {
             appendLog("Asset manifest is missing from the app bundle.")
+            ammarBridge.launching = false
+            showWhenFree(title: "AMMAR YT — محرك غير مكتمل",
+                         message: "ملف manifest الخاص بالمحرك غير موجود داخل التطبيق. يجب بناء نسخة PlayGTA5Native من ملفات المحرك والرسوميات المتوافقة أولًا.")
             return
         }
         // No game files on this device and a server that doesn't answer: the game would start with no files and
@@ -1028,6 +1038,7 @@ final class NativePortViewController: UIViewController, MTKViewDelegate {
                 guard let self else { return }
                 if answered { self.startEngine(); return }
                 self.appendLog("Play: no game files on this device and the server doesn't answer (\(self.serverProblem)); opened Game files.")
+                self.ammarBridge.launching = false
                 self.updatePlayEnabled()
                 self.showGameFiles()
             }
@@ -1049,6 +1060,14 @@ final class NativePortViewController: UIViewController, MTKViewDelegate {
                 }
             }
             startWhenFullScreen()
+            return
+        }
+        #endif
+        #if !targetEnvironment(macCatalyst)
+        // Request landscape only after the native boot has passed its asset
+        // preflight; the launcher's menus and first-run installer stay portrait.
+        if ammarHost != nil && !ammarWantsLandscape && !engineStarted {
+            requestAMMARLandscapeForGame()
             return
         }
         #endif
