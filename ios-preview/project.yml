@@ -24,8 +24,8 @@ targets:
       properties:
         CFBundleDisplayName: AMMAR YT GTA V
         CFBundleDevelopmentRegion: ar
-        CFBundleShortVersionString: "0.2.0"
-        CFBundleVersion: "2"
+        CFBundleShortVersionString: "0.3.0"
+        CFBundleVersion: "3"
         UILaunchScreen: {}
         UIRequiresFullScreen: false
         UISupportedInterfaceOrientations:
