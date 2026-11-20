@@ -1,4 +1,5 @@
 import UIKit
+import SwiftUI
 import MetalKit
 import GameController
 import AVFAudio
@@ -139,6 +140,10 @@ final class NativePortViewController: UIViewController, MTKViewDelegate {
     private var lastFPSLabelUpdate: CFTimeInterval = 0
     /// The start screen; it hides once the game's world is up.
     private lazy var home = HomeView(modes: GameMode.allCases.map { ($0.title, $0 == .story ? "book.fill" : "map.fill") }, log: output)
+    // The same SwiftUI launcher that was tested in ios-preview, now hosted
+    // inside the actual game controller and bound to its real runtime actions.
+    private let ammarBridge = AMMARLauncherBridge()
+    private var ammarHost: UIHostingController<PreviewRoot>?
     private var launchButton: UIButton { home.playButton }
     private var preloadLabel: UILabel { home.preloadLabel }
     private var controllerLabel: UILabel { home.controllerLabel }
@@ -758,6 +763,74 @@ final class NativePortViewController: UIViewController, MTKViewDelegate {
         if ProcessInfo.processInfo.arguments.contains("--boot-engine") {
             DispatchQueue.main.async { self.startEngine() }
         }
+        // Keep existing automated test entry points and the game host intact.
+        // Normal launches show the new AMMAR interface by default.
+        let args = ProcessInfo.processInfo.arguments
+        if !args.contains("--use-legacy-home")
+            && !args.contains("--boot-engine")
+            && !args.contains("--show-log")
+            && !args.contains("--open-game-files")
+            && !args.contains("--install-link")
+            && !args.contains("--open-settings")
+            && !args.contains("--open-layout-editor")
+            && !args.contains("--open-help-text-editor")
+            && !args.contains("--open-hud-layout")
+            && !args.contains("--touch-controls-preview") {
+            installAMMARLauncher()
+        }
+    }
+
+    private func installAMMARLauncher() {
+        guard ammarHost == nil else { return }
+        ammarBridge.nativeAvailable = true
+        ammarBridge.selectedMode = GameSettings.shared.gameModeChoice == .sandbox ? 1 : 0
+        ammarBridge.onPlay = { [weak self] mode in self?.startFromAMMARLauncher(mode: mode) }
+        ammarBridge.onData = { [weak self] in self?.showGameFiles() }
+        ammarBridge.onMods = { [weak self] in self?.showInstalledMods() }
+        ammarBridge.onSettings = { [weak self] in self?.showSettings() }
+
+        let host = UIHostingController(rootView: PreviewRoot(bridge: ammarBridge))
+        host.view.backgroundColor = Theme.night
+        host.view.translatesAutoresizingMaskIntoConstraints = false
+        addChild(host)
+        view.addSubview(host.view)
+        NSLayoutConstraint.activate([
+            host.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            host.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            host.view.topAnchor.constraint(equalTo: view.topAnchor),
+            host.view.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        ])
+        host.didMove(toParent: self)
+        ammarHost = host
+        refreshAMMARLauncherStatus()
+    }
+
+    private func refreshAMMARLauncherStatus() {
+        guard ammarHost != nil else { return }
+        ammarBridge.dataReady = GameFolder.isChosen || Self.isServerAddress(GameSettings.shared.assetServer)
+        ammarBridge.dataBusy = GameInstallManager.shared.isRunning
+    }
+
+    private func startFromAMMARLauncher(mode: Int) {
+        guard !engineStarted else { return }
+        if GameInstallManager.shared.isRunning {
+            showGameFiles() // Show real download status while a download runs.
+            return
+        }
+        GameSettings.shared.gameMode = mode == 1 ? .sandbox : .story
+        refreshModeChoice()
+        if !GameFolder.isChosen && !Self.isServerAddress(GameSettings.shared.assetServer) {
+            // Without data we open the *real* importer, not a fake Play screen.
+            showGameFiles()
+            return
+        }
+        guard launchButton.isEnabled else {
+            showGameFiles()
+            return
+        }
+        ammarBridge.launching = true
+        startEngine() // The actual PGStartEngine call remains inside this method.
+        if !engineStarted { ammarBridge.launching = false }
     }
 
     @objc private func preloadChanged() {
@@ -848,6 +921,8 @@ final class NativePortViewController: UIViewController, MTKViewDelegate {
             #endif
         }
         if line == "WORLD_READY" || line.contains("\"label\":\"First frame\"") {
+            // The native engine, not a demo, has produced its first game frame.
+            ammarHost?.view.isHidden = true
             diagnosticsOverlay?.isHidden = true
             #if !targetEnvironment(macCatalyst)
             touchControlsAvailable = true   // a Mac has no touch screen: keyboard, mouse or a controller
@@ -1530,6 +1605,7 @@ final class NativePortViewController: UIViewController, MTKViewDelegate {
     private func updatePlayEnabled() {
         let server = Self.isServerAddress(GameSettings.shared.assetServer)
         launchButton.isEnabled = !engineStarted && !GameInstallManager.shared.isRunning && (GameFolder.isChosen || server) && GameSettings.shared.gameModeChoice != nil
+        refreshAMMARLauncherStatus()
     }
     static func isServerAddress(_ text: String) -> Bool {
         guard let url = URL(string: text), let scheme = url.scheme?.lowercased(), let host = url.host else { return false }
