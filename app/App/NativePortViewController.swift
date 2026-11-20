@@ -1021,6 +1021,10 @@ final class NativePortViewController: UIViewController, MTKViewDelegate {
         // may be hidden (it is with a controller), so a panel offers Send log and Settings (GTA-21).
         if engineStarted, line.hasPrefix("Native game thread stopped:") || line.hasPrefix("Native boot stopped:")
             || line.hasPrefix("Engine stopped at unported host function:") {
+            // Show the original engine error panel, not a frozen launcher
+            // obscuring the real runtime diagnostics.
+            ammarBridge.launching = false
+            ammarHost?.view.isHidden = true
             if stableTimer?.isValid != false { ModGuard.stoppedWhileStarting() }
             showEngineStopped()
         }
@@ -1102,6 +1106,17 @@ final class NativePortViewController: UIViewController, MTKViewDelegate {
                 self.updatePlayEnabled()
                 self.showGameFiles()
             }
+            return
+        }
+        // A bookmarked game folder can disappear while the user is away.
+        // Validate it before orienting or starting Metal; the original game
+        // files screen is the only place that repairs missing data.
+        if !engineStarted, ammarHost != nil, GameFolder.isChosen, GameFolder.open() == nil {
+            appendLog("AMMAR: the selected local game folder is no longer accessible.")
+            GameFolder.clear()
+            updateServerStatus()
+            ammarBridge.launching = false
+            showGameFiles()
             return
         }
         #if targetEnvironment(macCatalyst)
