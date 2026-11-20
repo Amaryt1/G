@@ -1,0 +1,63 @@
+name: AMMAR YT - Preview iOS build
+
+on:
+  push:
+    branches:
+      - feature/ammar-yt-v030-play-bridge
+  pull_request:
+    paths:
+      - "ios-preview/**"
+      - "app/project.yml"
+      - ".github/workflows/ammar-preview-build.yml"
+
+jobs:
+  preview:
+    name: SwiftUI preview build and version consistency
+    runs-on: macos-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check visible version consistency
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          source = Path("ios-preview/Sources/AMMARGTAVPreviewApp.swift").read_text()
+          preview = Path("ios-preview/project.yml").read_text()
+          native = Path("app/project.yml").read_text()
+          match = re.search(r'static let version = "([^"]+)"', source)
+          assert match, "AMMARBuild.version missing in shared launcher"
+          version = match.group(1)
+          for name, spec in [("preview", preview), ("native", native)]:
+              assert f'CFBundleShortVersionString: "{version}"' in spec, (
+                  f"{name} marketing version does not match shared UI v{version}"
+              )
+          print(f"AMMAR YT v{version}: display and XcodeGen versions match")
+          PY
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate preview Xcode project
+        working-directory: ios-preview
+        run: xcodegen generate --spec project.yml
+      - name: Build iPhone simulator target without game data
+        working-directory: ios-preview
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project AMMARYTGTAUIPreview.xcodeproj \
+            -scheme AMMARYTGTAUIPreview \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath Build/CI \
+            CODE_SIGNING_ALLOWED=NO \
+            build | tee Build/ci-xcodebuild.log
+      - name: Upload compiler log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ammar-preview-compiler-log
+          path: ios-preview/Build/ci-xcodebuild.log
+          if-no-files-found: ignore
