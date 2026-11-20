@@ -21,7 +21,7 @@ enum AMMARBuild {
     // The preview Xcode project is generated locally and can keep stale build
     // settings after a GitHub Pull. This constant updates the visible version
     // immediately; bump it with every visible change.
-    static let version = "0.3.1"
+    static let version = "0.3.2"
 }
 
 // Actions are only connected to a real engine in the native Xcode target.
